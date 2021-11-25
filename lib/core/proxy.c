@@ -277,13 +277,10 @@ static void build_request(h2o_req_t *req, h2o_iovec_t *method, h2o_url_t *url, h
     }
 }
 
-static h2o_httpclient_t *detach_client(struct rp_generator_t *self)
+static void detach_client(struct rp_generator_t *self)
 {
-    h2o_httpclient_t *client = self->client;
-    assert(client != NULL);
-    client->data = NULL;
+    assert(self->client != NULL);
     self->client = NULL;
-    return client;
 }
 
 static void do_close(struct rp_generator_t *self)
@@ -299,8 +296,8 @@ static void do_close(struct rp_generator_t *self)
      * Thus, to ensure to do closing things, both of dispose and stop callbacks call this function.
      */
     if (self->client != NULL) {
-        h2o_httpclient_t *client = detach_client(self);
-        client->cancel(client);
+        self->client->cancel(self->client);
+        detach_client(self);
     }
     h2o_timer_unlink(&self->send_headers_timeout);
 }
