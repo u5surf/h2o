@@ -318,6 +318,7 @@ static void do_send(struct rp_generator_t *self)
     size_t veccnt;
     h2o_send_state_t ststate;
 
+    assert(self->client != NULL || self->last_content_before_send != NULL);
     vecs[0] = h2o_doublebuffer_prepare(&self->sending,
                                        self->last_content_before_send != NULL ? &self->last_content_before_send : self->client->buf,
                                        self->src_req->preferred_chunk_size);
