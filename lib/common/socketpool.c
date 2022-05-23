@@ -108,10 +108,10 @@ static void check_pool_expired_locked(h2o_socketpool_t *pool, h2o_loop_t *this_l
 {
     uint64_t next_expired = destroy_expired_locked(pool);
     if (next_expired != UINT64_MAX) {
-        if (this_loop == pool->_interval_cb.loop && !h2o_timer_is_linked(&pool->_interval_cb.timeout)) {
+        if (!h2o_timer_is_linked(&pool->_interval_cb.timeout)) {
             if (next_expired < CHECK_EXPIRATION_MIN_INTERVAL)
                 next_expired = CHECK_EXPIRATION_MIN_INTERVAL;
-            h2o_timer_link(pool->_interval_cb.loop, next_expired, &pool->_interval_cb.timeout);
+            h2o_timer_link(this_loop, next_expired, &pool->_interval_cb.timeout);
         }
     }
 }
@@ -279,9 +279,6 @@ void h2o_socketpool_set_ssl_ctx(h2o_socketpool_t *pool, SSL_CTX *ssl_ctx)
 
 void h2o_socketpool_register_loop(h2o_socketpool_t *pool, h2o_loop_t *loop)
 {
-    if (pool->_interval_cb.loop != NULL)
-        return;
-
     pool->_interval_cb.loop = loop;
     h2o_timer_init(&pool->_interval_cb.timeout, on_timeout);
     h2o_timer_link(loop, CHECK_EXPIRATION_MIN_INTERVAL, &pool->_interval_cb.timeout);
@@ -595,7 +592,7 @@ int h2o_socketpool_return(h2o_socketpool_t *pool, h2o_socket_t *sock)
     }
     memset(&entry->all_link, 0, sizeof(entry->all_link));
     memset(&entry->target_link, 0, sizeof(entry->target_link));
-    entry->added_at = h2o_now(h2o_socket_get_loop(sock));
+    entry->added_at = h2o_now(pool->_interval_cb.loop);
     entry->target = target;
 
     __sync_add_and_fetch(&pool->_shared.pooled_count, 1);
